@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>做片输入</title>
+<style>
+  :root { color-scheme: light; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: #e7e2d8;
+    color: #1c1b19;
+    font: 15px/1.45 "Segoe UI", "Microsoft YaHei", sans-serif;
+  }
+  main {
+    width: min(720px, calc(100% - 32px));
+    margin: 28px auto 48px;
+  }
+  h1 { font-size: 22px; font-weight: 650; margin: 0 0 4px; }
+  .lead { margin: 0 0 20px; color: #5c574e; }
+  section {
+    background: #faf8f4;
+    border: 1px solid #d4cec3;
+    padding: 16px 16px 8px;
+    margin: 0 0 12px;
+  }
+  h2 { font-size: 13px; letter-spacing: 0.08em; margin: 0 0 12px; color: #6a645b; }
+  label { display: block; margin: 0 0 12px; }
+  label span { display: block; margin-bottom: 4px; }
+  input[type="text"], input[type="number"], textarea, select {
+    width: 100%;
+    border: 1px solid #c9c2b6;
+    background: #fff;
+    color: inherit;
+    font: inherit;
+    padding: 8px 10px;
+  }
+  textarea { min-height: 72px; resize: vertical; }
+  input:focus, textarea:focus, select:focus { outline: 2px solid #1c1b19; outline-offset: 1px; }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .check { display: flex; align-items: center; gap: 8px; margin: 0 0 12px; }
+  .check input { width: auto; }
+  .actions { display: flex; gap: 8px; margin-top: 4px; }
+  button {
+    font: inherit;
+    border: 1px solid #1c1b19;
+    background: #1c1b19;
+    color: #faf8f4;
+    padding: 8px 14px;
+    cursor: pointer;
+  }
+  button.ghost { background: transparent; color: #1c1b19; }
+  #status { min-height: 1.4em; margin: 10px 0 0; color: #3d5a3a; }
+  @media (max-width: 640px) { .row { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<main>
+  <h1>做片输入</h1>
+  <p class="lead">填完后保存。做片时读这份 brief.json，不再把这些内容写进长说明。</p>
+
+  <form id="brief">
+    <section>
+      <h2>主题</h2>
+      <label><span>片名</span><input type="text" name="title" autocomplete="off"></label>
+      <label><span>风格</span><input type="text" name="style" placeholder="中文名、英文名或文件夹名" autocomplete="off"></label>
+      <label><span>讲给谁</span><input type="text" name="audience" autocomplete="off"></label>
+      <label><span>一句话</span><textarea name="logline"></textarea></label>
+      <label><span>结尾停住的那句</span><input type="text" name="lastLine" autocomplete="off"></label>
+    </section>
+
+    <section>
+      <h2>环境</h2>
+      <label><span>在哪里，光线和色彩</span><textarea name="place"></textarea></label>
+      <label><span>这段时间里怎么变</span><textarea name="change"></textarea></label>
+    </section>
+
+    <section>
+      <h2>登场物</h2>
+      <label><span>人物、生物或用品</span><textarea name="cast"></textarea></label>
+      <label><span>主角</span><input type="text" name="hero" autocomplete="off"></label>
+      <label><span>参考图</span><input type="text" name="refs" placeholder="文件路径，没有就留空" autocomplete="off"></label>
+    </section>
+
+    <section>
+      <h2>交互</h2>
+      <label><span>谁对谁做什么</span><textarea name="action"></textarea></label>
+      <label><span>结果变成什么样</span><textarea name="result"></textarea></label>
+    </section>
+
+    <section>
+      <h2>成片</h2>
+      <div class="row">
+        <label><span>片长（秒）</span><input type="number" name="seconds" min="5" max="180" value="40"></label>
+        <label><span>画幅</span>
+          <select name="size">
+            <option value="1920x1080">1920×1080</option>
+            <option value="1080x1920">1080×1920</option>
+            <option value="1080x1440">1080×1440</option>
+          </select>
+        </label>
+      </div>
+      <label><span>自己的音乐、照片、logo</span><textarea name="materials" placeholder="没有就留空"></textarea></label>
+      <label class="check"><input type="checkbox" name="storyboard"> 先看分镜再做全片</label>
+    </section>
+
+    <div class="actions">
+      <button type="submit">保存 brief.json</button>
+      <button type="button" class="ghost" id="clear">清空</button>
+    </div>
+    <p id="status" role="status"></p>
+  </form>
+</main>
+<script>
+const form = document.getElementById('brief');
+const status = document.getElementById('status');
+const KEY = 'vedio-brief';
+
+function read() {
+  const data = {};
+  for (const el of form.elements) {
+    if (!el.name) continue;
+    data[el.name] = el.type === 'checkbox' ? el.checked : el.value.trim();
+  }
+  if (data.seconds !== '') data.seconds = Number(data.seconds);
+  return data;
+}
+
+function fill(data) {
+  if (!data) return;
+  for (const el of form.elements) {
+    if (!el.name || !(el.name in data)) continue;
+    if (el.type === 'checkbox') el.checked = Boolean(data[el.name]);
+    else el.value = data[el.name] == null ? '' : data[el.name];
+  }
+}
+
+form.addEventListener('input', () => {
+  localStorage.setItem(KEY, JSON.stringify(read()));
+});
+
+form.addEventListener('submit', (event) => {
+  event.preventDefault();
+  const data = read();
+  const blob = new Blob([JSON.stringify(data, null, 2) + '\n'], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'brief.json';
+  a.click();
+  URL.revokeObjectURL(a.href);
+  status.textContent = '已保存 brief.json。放到 films/<片名>/ 里。';
+});
+
+document.getElementById('clear').addEventListener('click', () => {
+  form.reset();
+  form.elements.seconds.value = 40;
+  localStorage.removeItem(KEY);
+  status.textContent = '';
+});
+
+try { fill(JSON.parse(localStorage.getItem(KEY) || 'null')); } catch (e) {}
+</script>
+</body>
+</html>

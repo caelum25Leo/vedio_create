@@ -1,0 +1,34 @@
+# clangd 配置（只影响编辑器的诊断/补全/跳转，不影响 CMake 的真实编译）。
+#
+# 为什么需要它：
+#   本工程用 "Visual Studio 14 2015" 生成器，CMake 不会产出 compile_commands.json，
+#   clangd 拿不到编译参数，于是找不到 Qt 头文件，编辑器里就报
+#     'QApplication' file not found
+#     unknown type name 'QApplication'
+#   放在工程根目录后，clangd 会对该目录下所有 C/C++ 文件套用下面的参数。
+#
+# 修改 Qt 安装位置时，同步更新下面 4 条 Qt 的 -I 即可（与 CMakeLists.txt 的
+# CMAKE_PREFIX_PATH "C:/Qt/Qt5.7.0/5.7/msvc2015" 保持一致）。
+CompileFlags:
+  Add:
+    # 工程实际是 set(CMAKE_CXX_STANDARD 11)（MSVC 2015 编译），但 Qt5.7 的部分头文件
+    # 用了 C++14 的 auto 返回类型推导，MSVC 当扩展接受、clang 会报
+    #   'auto' return without trailing return type; deduced return types are a C++14 extension
+    # 所以这里给 clangd 用 c++14，和真实编译结果等价（只影响编辑器诊断）。
+    - -std=c++14
+    # 与 CMakeLists.txt 的 /utf-8、以及 Qt5 的 MSVC 构建保持一致
+    - -DUNICODE
+    - -D_UNICODE
+    - -DWIN32
+    - -D_WINDOWS
+    - -DQT_CORE_LIB
+    - -DQT_GUI_LIB
+    - -DQT_WIDGETS_LIB
+    # Qt 5.7 (msvc2015) 头文件
+    - -IC:/Qt/Qt5.7.0/5.7/msvc2015/include
+    - -IC:/Qt/Qt5.7.0/5.7/msvc2015/include/QtCore
+    - -IC:/Qt/Qt5.7.0/5.7/msvc2015/include/QtGui
+    - -IC:/Qt/Qt5.7.0/5.7/msvc2015/include/QtWidgets
+    # 工程自身与第三方头文件（对应 target_include_directories(testCode ...)）
+    - -ID:/code/vedio_create/UI/include
+    - -ID:/code/ThirdParty/Include
